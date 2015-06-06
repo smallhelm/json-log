@@ -14,6 +14,7 @@ log.error(new Error("I'm an error"), 'with', {some: ['more', {arbitrary: 'data'}
 
 //other log levels
 log.log('...');// same as log(...)
+log.err('...');// same as log.error(...)
 log.info('...');
 log.warn('...');
 log.debug('...');
@@ -23,6 +24,7 @@ log.debug('...');
 ["2015-06-06T18:42:52.625Z","log","whatever",{"you":["want","with"]},"any",{"number":{"of":"arguments"}},"!"]
 ["2015-06-06T18:42:52.627Z","error",{"message":"Error: I'm an error","stack":"Error: I'm an error\n    at Object.<anonymous> (/home/smallhelm/json-log/tests.js:5:11)\n    at Module._compile (module.js:456:26)\n    at Object.Module._extensions..js (module.js:474:10)\n    at Module.load (module.js:356:32)\n    at Function.Module._load (module.js:312:12)\n    at Function.Module.runMain (module.js:497:10)\n    at startup (node.js:119:16)\n    at node.js:935:3"},"with",{"some":["more",{"arbitrary":"data"}]}]
 ["2015-06-06T18:42:52.627Z","log","..."]
+["2015-06-06T18:42:52.627Z","error","..."]
 ["2015-06-06T18:42:52.627Z","info","..."]
 ["2015-06-06T18:42:52.627Z","warn","..."]
 ["2015-06-06T18:42:52.627Z","debug","..."]
