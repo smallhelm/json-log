@@ -1,6 +1,6 @@
 {
   "name": "json-log",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "write logs as json to stdout and stderr",
   "main": "index.js",
   "files": [
