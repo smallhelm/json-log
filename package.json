@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/smallhelm/json-log/issues"
   },
-  "homepage": "https://github.com/smallhelm/json-log#readme"
+  "homepage": "https://github.com/smallhelm/json-log#readme",
+  "dependencies": {
+    "is-error": "2.2.0"
+  }
 }
