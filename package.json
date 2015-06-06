@@ -1,0 +1,28 @@
+{
+  "name": "json-log",
+  "version": "1.0.0",
+  "description": "write logs as json to stdout and stderr",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smallhelm/json-log.git"
+  },
+  "keywords": [
+    "json",
+    "log",
+    "stdout",
+    "stderr"
+  ],
+  "author": "smallhelm",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/smallhelm/json-log/issues"
+  },
+  "homepage": "https://github.com/smallhelm/json-log#readme"
+}
