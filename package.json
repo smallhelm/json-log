@@ -7,7 +7,7 @@
     "index.js"
   ],
   "scripts": {
-    "test": "node tests.js"
+    "test": "standard && ava"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,10 @@
   },
   "homepage": "https://github.com/smallhelm/json-log#readme",
   "dependencies": {
-    "is-error": "2.2.0"
+    "serialize-error": "^2.1.0"
+  },
+  "devDependencies": {
+    "ava": "^0.25.0",
+    "standard": "^11.0.1"
   }
 }
