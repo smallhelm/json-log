@@ -1,4 +1,5 @@
 var util = require('util')
+var isTypedArray = require('is-typedarray')
 var serializeError = require('serialize-error')
 var hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -16,11 +17,12 @@ function toJsonCore (data, seen) {
   }
   if (data === null) {
     return 'null'
-  }
-  if (data instanceof Error) {
+  } else if (data instanceof Error) {
     return JSON.stringify(serializeError(data))
   } else if (Buffer.isBuffer(data)) {
     return JSON.stringify(util.inspect(data))
+  } else if (isTypedArray(data)) {
+    return JSON.stringify(util.inspect(data, {maxArrayLength: 10, breakLength: Infinity}))
   }
   if (seen.indexOf(data) >= 0) {
     return '"[Circular]"'
@@ -54,17 +56,14 @@ function stringifyPairs (data) {
   if (data instanceof Error) {
     data = {err: data}
   }
-  var out = ''
-  var k, v
-  for (k in data) {
-    if (hasOwnProperty.call(data, k)) {
-      v = toJson(data[k])
-      if (v) {
-        out += JSON.stringify(k) + ':' + v + ','
-      }
-    }
+  var str = toJson(data)
+  if (!str || str === 'null' || str === '{}') {
+    return ''
   }
-  return out
+  if (str[0] === '{') {
+    return str.slice(1, -1) + ','
+  }
+  return '"data":' + str + ','
 }
 
 var levels = {
@@ -74,7 +73,7 @@ var levels = {
 }
 
 function logIt (level, message, ctx) {
-  var line = '{"level":' + level + ',' + ctx + '"msg":' + toJson(message) + '}\n'
+  var line = '{"level":' + level + ',' + ctx + '"msg":' + (toJson(message) || 'null') + '}\n'
   if (level > levels.error) {
     process.stdout.write(line)
   } else {
@@ -88,7 +87,7 @@ function Logger (ctx) {
     return function (message, data) {
       if (arguments.length === 1 && typeof message !== 'string') {
         data = message
-        message = lname
+        message = null
       }
       return logIt(levels[lname], message, ctx + stringifyPairs(data))
     }
