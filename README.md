@@ -1,55 +1,141 @@
 # json-log
-write logs as json to stdout and stderr
 
- * no configuration!
- * ISO timestamps
- * use log levels if you feel like it
+[![Build Status](https://travis-ci.org/smallhelm/json-log.svg)](https://travis-ci.org/smallhelm/json-log)
+
+Lightweight, robust, fast, and opinionated json logger.
+
+## Philosophy
+### Write to stdout/err
+
+Let your process manager (systemd, heroku, lambda etc.) handle writing logs. Persisting logs can get complicated fast; log rotation, file limits, compression, and backups just to name a few.
+
+Your nodejs process should not be burdened with all that complexity. Simply write to stdout/err and let the manager take care of the rest.
+
+I often use systemd with journald+syslog. It works amazing. You can always set up other tools that monitor syslog and pipe them to another service i.e. AWS Cloudwatch.
+
+#### Timestamp? pid? hostname?
+
+The process manager's logger should add timestamps and other info such as the process name, pid and hostname.
+
+### Logs should be meaningful
+
+Logs should help you monitor the system, alert you of errors, and help you diagnose issues in a post-mortem. They should not be riddled with "normal" error messages that drown out the errors that require your attention.
+
+Having only 3 levels helps you focus and create meaningful, actionable logs.
+
+#### 1 - `error`
+
+Something really went wrong, the system is likely unstable, and staff should be alerted to take action ASAP. A stable system will not emit error logs, but when you do seem them you take them seriously and fix the problem so that condition is gracefully handled in the future. Don’t be shy, you should use `log.error` statements generously. But they should only be called when there is an actual error that requires your attention.
+
+Examples:
+
+* A remote service you depend on changed it's api and now responds with unexpected data. Your code now throws an exception trying to parse it.
+* A bad db query was made. You'll want to fix that query so it will work in the future.
+* The db connection was lost and the retries failed.
+
+These log entries are sent to stderr. You can setup your process manager to do something special with the stderr stream i.e. email them to you, or trigger a monitoring alarm.
+
+#### 2 - `warn`
+
+A recoverable error that is somewhat unexpected. You'll want to monitor these to give you clues when things may become unstable, or detect malicious users.
+
+Examples:
+
+* A user tried uploading a file that exceeded the size limit. Keep an eye on that user id, they may be malicious. (Be sure to include the userId in the log entries so you can correlate their activity)
+* A rpc call had to retry before getting a successful response. May indicate the service or network connection is having trouble.
+* A sub-process was restarted. May be an issue if it's repeatedly restarted.
+
+#### 3 - `info`
+
+Any useful information about the operation of the system. Information that helps you in a post-mortem, or in analysing the usage and performance of the system.
+
+Examples:
+* This request was made
+* This task was started
+* This query returned X
+
+#### Why no debug/trace logs?
+
+During development use `console.log` to debug your system. Remove those `console.log`s before deploying to production. Anything that would be helpful in production should use `log.info`.
+
+### Context is crucial
+
+High concurrency is easy to achieve in nodejs. Therefore it's important that each entry contains information about its context. What request it is a part of, what parameters its working with etc. Include request ids, urls, user ids, db record ids, anything that helps give context to the log message. `json-log` will robustly serialize them, including error objects.
+
+Create context specific loggers using `log.child(ctx)`
+
+## API
 
 ```js
-var log = require('json-log');
-
-log('whatever', {you: ['want', 'with']}, 'any', {number: {'of': 'arguments'}}, '!');
-
-log.error(new Error("I'm an error"), 'with', {some: ['more', {arbitrary: 'data'}]});
-
-//other log levels
-log.log('...');// same as log(...)
-log.err('...');// same as log.error(...)
-log.info('...');
-log.warn('...');
-log.debug('...');
+var log = require('json-log')
 ```
-## output
+
+### log.info(message, data)
+
+Simply write a message string along with some optional data to `stdout` at level `3`.
+
 ```js
-["2015-06-06T18:42:52.625Z","log","whatever",{"you":["want","with"]},"any",{"number":{"of":"arguments"}},"!"]
-["2015-06-06T18:42:52.627Z","error",{"message":"Error: I'm an error","stack":"Error: I'm an error\n    at Object.<anonymous> (/home/smallhelm/json-log/tests.js:5:11)\n    at Module._compile (module.js:456:26)\n    at Object.Module._extensions..js (module.js:474:10)\n    at Module.load (module.js:356:32)\n    at Function.Module._load (module.js:312:12)\n    at Function.Module.runMain (module.js:497:10)\n    at startup (node.js:119:16)\n    at node.js:935:3"},"with",{"some":["more",{"arbitrary":"data"}]}]
-["2015-06-06T18:42:52.627Z","log","..."]
-["2015-06-06T18:42:52.627Z","error","..."]
-["2015-06-06T18:42:52.627Z","info","..."]
-["2015-06-06T18:42:52.627Z","warn","..."]
-["2015-06-06T18:42:52.627Z","debug","..."]
+var log = require('json-log')
+
+log.info('hello world')
+// OUT-> {"level":3,"msg":"hello world"}
+
+log.info('hello world', {extra: 'data', arr: [1, 2]})
+// OUT-> {"level":3,"extra":"data","arr":[1,2],"msg":"hello world"}
+
+log.info('hello world', [1, 2])// shorthand for {data: [1,2]}
+// OUT-> {"level":3,"data":[1,2],"msg":"hello world"}
+
+log.warn('wat da?', {more: 'info'})
+// OUT-> {"level":2,"more":"info","msg":"wat da?"}
 ```
 
-# License
+### log.warn(message, data)
 
-The MIT License (MIT)
+Same as `log.info` but level is `2`
 
-Copyright (c) 2015 Small Helm LLC
+```js
+log.warn('wat da?', {more: 'info'})
+// OUT-> {"level":2,"more":"info","msg":"wat da?"}
+```
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+### log.error(message, data)
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Same as `log.info` but writes to `stderr` and level is `1`
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+```js
+log.error('grrr', {err: new Error('fail')})
+log.error('grrr', new Error('fail'))// shorthand for {err: ...}
+// ERR-> {"level":1,"err":{"name":"Error","message":"fail","stack":"Error..."},"msg":"some error"}
+```
+
+### log2 = log.child(ctx)
+
+Create a new log that has the ctx data included on every entry.
+
+```js
+var log2 = log.child({reqId: 1, foo: 'bar'})
+
+log2.info('hello again')
+// OUT-> {"level":3,"reqId":1,"foo":"bar","msg":"hello again"}
+
+log2.info('hello again', {aaa: 1})
+// OUT-> {"level":3,"reqId":1,"foo":"bar","aaa":1,"msg":"hello again"}
+
+var log3 = log2.child({baz: '333'})
+log3.info('yet again')
+// OUT-> {"level":3,"reqId":1,"foo":"bar","baz":"333","msg":"yet again"}
+```
+
+You can override a parent ctx key, but it will write both keys to the log so no data is lost.
+
+```js
+var log2 = log.child({aaa: 'base'})
+var log3 = log2.child({aaa: 'over1'})
+log3.info('try to overwrite', {aaa: 'inline'})
+// OUT-> {"level":3,"aaa":"base","aaa":"over1","aaa":"inline","msg":"try to overwrite"}
+```
+
+## License
+
+MIT
