@@ -99,7 +99,7 @@ test('log', function (t) {
   var err = new Error('wat')
   delete err.stack
   t.is(log.info(err), '{"level":3,"err":{"name":"Error","message":"wat"},"msg":null}\n')
-  var err = new TypeError('wat')
+  err = new TypeError('wat')
   delete err.stack
   t.is(log.info('foo', err), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
   t.is(log.info('foo', {err: err}), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
@@ -128,7 +128,7 @@ test('log.child ctx is immutable', function (t) {
 test('log.child duplicate keys rather than overwriting parent ctx', function (t) {
   var log2 = log.child({foo: 'bar'})
   t.is(log2.info({foo: 'baz'}), '{"level":3,"foo":"bar","foo":"baz","msg":null}\n')
-  var log3 = log2.child({foo: 'overwrite?' })
+  var log3 = log2.child({foo: 'overwrite?'})
   t.is(log3.info({foo: 'baz'}), '{"level":3,"foo":"bar","foo":"overwrite?","foo":"baz","msg":null}\n')
 })
 

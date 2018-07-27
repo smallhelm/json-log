@@ -4,6 +4,24 @@
 
 Lightweight, robust, fast, and opinionated json logger.
 
+Works great with systemd, heroku, or lambda.
+
+- [Philosophy](#philosophy)
+  * [Write to stdout/err](#write-to-stdouterr)
+  * [Logs should be meaningful](#logs-should-be-meaningful)
+    + [1 error](#1---error)
+    + [2 warn](#2---warn)
+    + [3 info](#3---info)
+    + [Why no debug/trace?](#why-no-debugtrace)
+  * [Context is crucial](#context-is-crucial)
+  * [Robust json stringification](#robust-json-stringification)
+- [API](#api)
+  * [log.info(message, data)](#loginfomessage-data)
+  * [log.warn(message, data)](#logwarnmessage-data)
+  * [log.error(message, data)](#logerrormessage-data)
+  * [log2 = log.child(data)](#log2--logchilddata)
+- [License](#license)
+
 ## Philosophy
 ### Write to stdout/err
 
@@ -54,7 +72,7 @@ Examples:
 * This task was started
 * This query returned X
 
-#### Why no debug/trace logs?
+#### Why no debug/trace?
 
 During development use `console.log` to debug your system. Remove those `console.log`s before deploying to production. Anything that would be helpful in production should use `log.info`.
 
@@ -62,7 +80,17 @@ During development use `console.log` to debug your system. Remove those `console
 
 High concurrency is easy to achieve in nodejs. Therefore it's important that each entry contains information about its context. What request it is a part of, what parameters its working with etc. Include request ids, urls, user ids, db record ids, anything that helps give context to the log message. `json-log` will robustly serialize them, including error objects.
 
-Create context specific loggers using `log.child(ctx)`
+Create context specific loggers using `log.child(data)`
+
+### Robust json stringification
+
+This json encoder gracefully handles the following:
+
+* Circular references
+* Error objects
+* Buffers and Typed Arrays (using util.inspect to truncate them)
+
+See test.js for more details
 
 ## API
 
@@ -75,8 +103,6 @@ var log = require('json-log')
 Simply write a message string along with some optional data to `stdout` at level `3`.
 
 ```js
-var log = require('json-log')
-
 log.info('hello world')
 // OUT-> {"level":3,"msg":"hello world"}
 
@@ -86,8 +112,9 @@ log.info('hello world', {extra: 'data', arr: [1, 2]})
 log.info('hello world', [1, 2])// shorthand for {data: [1,2]}
 // OUT-> {"level":3,"data":[1,2],"msg":"hello world"}
 
-log.warn('wat da?', {more: 'info'})
-// OUT-> {"level":2,"more":"info","msg":"wat da?"}
+// Accidentally included a buffer or typed array in your data? No problem.
+log.info('oops!!', Buffer.alloc(10000000))
+// OUT-> {"level":3,"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >","msg":"oops!!"}
 ```
 
 ### log.warn(message, data)
@@ -109,9 +136,9 @@ log.error('grrr', new Error('fail'))// shorthand for {err: ...}
 // ERR-> {"level":1,"err":{"name":"Error","message":"fail","stack":"Error..."},"msg":"some error"}
 ```
 
-### log2 = log.child(ctx)
+### log2 = log.child(data)
 
-Create a new log that has the ctx data included on every entry.
+Create a new log that has the context `data` included on every entry.
 
 ```js
 var log2 = log.child({reqId: 1, foo: 'bar'})
@@ -127,7 +154,7 @@ log3.info('yet again')
 // OUT-> {"level":3,"reqId":1,"foo":"bar","baz":"333","msg":"yet again"}
 ```
 
-You can override a parent ctx key, but it will write both keys to the log so no data is lost.
+You can override a parent data context key, but it will write both keys to the log so no data is lost.
 
 ```js
 var log2 = log.child({aaa: 'base'})

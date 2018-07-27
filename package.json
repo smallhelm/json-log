@@ -1,7 +1,7 @@
 {
   "name": "json-log",
   "version": "1.0.1",
-  "description": "write logs as json to stdout and stderr",
+  "description": "Lightweight json logger. Works great with systemd, heroku, or lambda.",
   "main": "index.js",
   "files": [
     "index.js"
@@ -14,6 +14,11 @@
     "url": "git+https://github.com/smallhelm/json-log.git"
   },
   "keywords": [
+    "systemd",
+    "syslog",
+    "journald",
+    "heroku",
+    "lambda",
     "json",
     "log",
     "stdout",
