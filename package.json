@@ -1,6 +1,6 @@
 {
   "name": "json-log",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Lightweight json logger. Works great with systemd, heroku, or lambda.",
   "main": "index.js",
   "files": [
