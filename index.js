@@ -1,55 +1,48 @@
 var util = require('util')
 var isTypedArray = require('is-typedarray')
 var serializeError = require('serialize-error')
-var hasOwnProperty = Object.prototype.hasOwnProperty
 
-function toJsonCore (data, seen) {
-  switch (typeof data) {
-    case 'boolean':
-    case 'number':
-    case 'string':
-      return JSON.stringify(data)
-    case 'symbol':
-      return JSON.stringify(data.toString())
-    case 'undefined':
-    case 'function':
-      return undefined
-  }
-  if (data === null) {
-    return 'null'
+function safety (data, seen) {
+  if (typeof data === 'symbol') {
+    return data.toString()
+  } else if (typeof data !== 'object') {
+    return data
+  } else if (data === null) {
+    return null
+  } else if (data instanceof Date) {
+    return data
   } else if (data instanceof Error) {
-    return JSON.stringify(serializeError(data))
+    return serializeError(data)
   } else if (Buffer.isBuffer(data)) {
-    return JSON.stringify(util.inspect(data))
+    return util.inspect(data)
   } else if (isTypedArray(data)) {
-    return JSON.stringify(util.inspect(data, {maxArrayLength: 10, breakLength: Infinity}))
+    return util.inspect(data, {maxArrayLength: 10, breakLength: Infinity})
   }
   if (seen.indexOf(data) >= 0) {
-    return '"[Circular]"'
+    return '[Circular]'
   }
   seen.push(data)
-  var out = ''
-  var k, v, i
+  var out
+  var i, k
   if (Array.isArray(data)) {
+    out = []
     for (i = 0; i < data.length; i++) {
-      v = toJsonCore(data[i], seen.slice(0))
-      out += (v || 'null') + ','
+      out.push(safety(data[i], seen))
     }
-    return '[' + out.slice(0, -1) + ']'
-  }
-  for (k in data) {
-    if (hasOwnProperty.call(data, k)) {
-      v = toJsonCore(data[k], seen.slice(0))
-      if (v) {
-        out += JSON.stringify(k) + ':' + v + ','
-      }
+  } else {
+    out = {}
+    var keys = Object.keys(data)
+    for (i = 0; i < keys.length; i++) {
+      k = keys[i]
+      out[k] = safety(data[k], seen)
     }
   }
-  return '{' + out.slice(0, -1) + '}'
+  seen.pop()
+  return out
 }
 
 function toJson (data) {
-  return toJsonCore(data, [])
+  return JSON.stringify(safety(data, []))
 }
 
 function stringifyPairs (data) {
@@ -66,36 +59,23 @@ function stringifyPairs (data) {
   return '"data":' + str + ','
 }
 
-var levels = {
-  error: 1,
-  warn: 2,
-  info: 3
-}
-
-function logIt (level, message, ctx) {
-  var line = '{"level":' + level + ',' + ctx + '"msg":' + (toJson(message) || 'null') + '}\n'
-  if (level > levels.error) {
-    process.stdout.write(line)
-  } else {
-    process.stderr.write(line)
+function mkLevel (prefix, stream) {
+  return function (message, data) {
+    if (arguments.length === 1 && typeof message !== 'string') {
+      data = message
+      message = null
+    }
+    var line = prefix + stringifyPairs(data) + '"msg":' + (toJson(message) || 'null') + '}\n'
+    stream.write(line)
+    return line
   }
-  return line
 }
 
 function Logger (ctx) {
-  function mkLevel (lname) {
-    return function (message, data) {
-      if (arguments.length === 1 && typeof message !== 'string') {
-        data = message
-        message = null
-      }
-      return logIt(levels[lname], message, ctx + stringifyPairs(data))
-    }
-  }
   return {
-    error: mkLevel('error'),
-    warn: mkLevel('warn'),
-    info: mkLevel('info'),
+    error: mkLevel('{"level":1,' + ctx, process.stderr),
+    warn: mkLevel('{"level":2,' + ctx, process.stdout),
+    info: mkLevel('{"level":3,' + ctx, process.stdout),
     child: function (moreCtx) {
       return Logger(ctx + stringifyPairs(moreCtx))
     }

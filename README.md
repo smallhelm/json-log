@@ -43,7 +43,7 @@ Having only 3 levels helps you focus and create meaningful, actionable logs.
 
 #### 1 - `error`
 
-Something really went wrong, the system is likely unstable, and staff should be alerted to take action ASAP. A stable system will not emit error logs, but when you do seem them you take them seriously and fix the problem so that condition is gracefully handled in the future. Don’t be shy, you should use `log.error` statements generously. But they should only be called when there is an actual error that requires your attention.
+The system is unstable and staff should be alerted to take action. A stable system will not emit error logs. This way you take `error` seriously and fix the problem so that condition is gracefully handled in the future. Don't be shy, you should use `log.error` statements generously. But they should only be called when there is an actual error that requires your attention.
 
 Examples:
 

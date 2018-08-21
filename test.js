@@ -19,6 +19,9 @@ test('toJson', function (t) {
   t.is(toJson({one: {two: Buffer.alloc(1000, 0)}}), '{"one":{"two":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >"}}')
 
   t.is(toJson(new Int8Array(1000)), '"Int8Array [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ... 990 more items ]"')
+
+  t.is(toJson(new Date(1514160000000)), '"2017-12-25T00:00:00.000Z"')
+  t.is(toJson(new Date('invalid')), 'null')
 })
 
 test('toJson - Circular', function (t) {
