@@ -31,8 +31,7 @@
   },
   "homepage": "https://github.com/smallhelm/json-log#readme",
   "dependencies": {
-    "is-typedarray": "^1.0.0",
-    "serialize-error": "^2.1.0"
+    "is-typedarray": "^1.0.0"
   },
   "devDependencies": {
     "ava": "^0.25.0",

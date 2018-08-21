@@ -1,18 +1,17 @@
 var util = require('util')
 var isTypedArray = require('is-typedarray')
-var serializeError = require('serialize-error')
 
 function safety (data, seen) {
   if (typeof data === 'symbol') {
     return data.toString()
+  } else if (typeof data === 'function') {
+    return data.name ? '[Function: ' + data.name + ']' : '[Function]'
   } else if (typeof data !== 'object') {
     return data
   } else if (data === null) {
     return null
   } else if (data instanceof Date) {
     return data
-  } else if (data instanceof Error) {
-    return serializeError(data)
   } else if (Buffer.isBuffer(data)) {
     return util.inspect(data)
   } else if (isTypedArray(data)) {
@@ -35,6 +34,17 @@ function safety (data, seen) {
     for (i = 0; i < keys.length; i++) {
       k = keys[i]
       out[k] = safety(data[k], seen)
+    }
+
+    // Errors don't enumerate these properties, so let's be sure to include them
+    if (typeof data.name === 'string') {
+      out.name = data.name
+    }
+    if (typeof data.message === 'string') {
+      out.message = data.message
+    }
+    if (typeof data.stack === 'string') {
+      out.stack = data.stack
     }
   }
   seen.pop()

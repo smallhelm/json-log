@@ -5,7 +5,6 @@ var stringifyPairs = log.stringifyPairs
 
 test('toJson', function (t) {
   t.is(toJson(), undefined)
-  t.is(toJson(toJson), undefined)
   t.is(toJson(true), 'true')
   t.is(toJson(false), 'false')
   t.is(toJson(NaN), 'null')
@@ -22,6 +21,9 @@ test('toJson', function (t) {
 
   t.is(toJson(new Date(1514160000000)), '"2017-12-25T00:00:00.000Z"')
   t.is(toJson(new Date('invalid')), 'null')
+  t.is(toJson(function () {}), '"[Function]"')
+  t.is(toJson(function hi () {}), '"[Function: hi]"')
+  t.is(toJson(toJson), '"[Function: toJson]"')
 })
 
 test('toJson - Circular', function (t) {
@@ -79,16 +81,16 @@ test('stringifyPairs - unexpected inputs', function (t) {
   t.is(stringifyPairs(new String('hi')), '"0":"h","1":"i",')// eslint-disable-line no-new-wrappers
   t.is(stringifyPairs('hi'), '"data":"hi",')
   t.is(stringifyPairs([1, 2, 3]), '"data":[1,2,3],')
-  t.is(stringifyPairs(log), '')
+  t.is(stringifyPairs(log), '"error":"[Function]","warn":"[Function]","info":"[Function]","child":"[Function: child]","toJson":"[Function: toJson]","stringifyPairs":"[Function: stringifyPairs]",')
   t.is(stringifyPairs(Symbol('sym')), '"data":"Symbol(sym)",')
   t.is(stringifyPairs(Buffer.alloc(1000, 0)), '"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >",')
-  t.is(stringifyPairs(stringifyPairs), '')
+  t.is(stringifyPairs(stringifyPairs), '"data":"[Function: stringifyPairs]",')
 
   t.is(stringifyPairs({
     name: 'bob',
     fun: function () {},
     sym: Symbol('sym')
-  }), '"name":"bob","sym":"Symbol(sym)",')// eslint-disable-line no-new-wrappers
+  }), '"name":"bob","fun":"[Function: fun]","sym":"Symbol(sym)",')// eslint-disable-line no-new-wrappers
 
   t.true(/^"err":{"name":"Error","message":"hi","stack":.*},$/.test(stringifyPairs(new Error('hi'))))
 })
