@@ -1,6 +1,8 @@
 var jsonLog = require('./')
-var flatstr = require('flatstr')
 var spawn = require('child_process').spawn
+
+var log = jsonLog.child({}, {time: false})
+var logNoWrite = jsonLog.child({}, {time: false, write: function () {}})
 
 var deepObj = require('./package.json')
 deepObj.d0 = JSON.parse(JSON.stringify(deepObj))
@@ -11,7 +13,6 @@ deepObj.d3 = JSON.parse(JSON.stringify(deepObj))
 var longString = JSON.stringify(deepObj)
 
 function mkBaseline (str) {
-  str = flatstr(str)
   return function () {
     process.stdout.write(str)
   }
@@ -19,35 +20,35 @@ function mkBaseline (str) {
 
 var benches = {
   helloWorld: {
-    base: mkBaseline(jsonLog.info('hello world')),
+    base: mkBaseline(logNoWrite.info('hello world')),
     jlog: function () {
-      jsonLog.info('hello world')
+      log.info('hello world')
     }
   },
   deepObj: {
-    base: mkBaseline(jsonLog.info('hi', deepObj)),
+    base: mkBaseline(logNoWrite.info('hi', deepObj)),
     jlog: function () {
-      jsonLog.info('hi', deepObj)
+      log.info('hi', deepObj)
     },
     native: function () {
-      jsonLog.info('hi', JSON.stringify(deepObj))
+      log.info('hi', JSON.stringify(deepObj))
     }
   },
   longString: {
-    base: mkBaseline(jsonLog.info(longString)),
+    base: mkBaseline(logNoWrite.info(longString)),
     jlog: function () {
-      jsonLog.info(longString)
+      log.info(longString)
     }
   },
   child: {
     base: (function () {
-      var one = jsonLog.child({one: 1})
+      var one = logNoWrite.child({one: 1})
       var two = one.child({two: 'foobar'})
       var three = two.child({two: 'again'})
       return mkBaseline(three.info('hi', {ok: 1023, wat: ['da', 'heck']}))
     }()),
     jlog: function () {
-      var one = jsonLog.child({one: 1})
+      var one = log.child({one: 1})
       var two = one.child({two: 'foobar'})
       var three = two.child({two: 'again'})
       three.info('hi', {ok: 1023, wat: ['da', 'heck']})
@@ -98,8 +99,6 @@ function mean (arr) {
 }
 
 async function main () {
-  console.log()
-  console.log()
   for (let group of Object.keys(benches)) {
     console.log(group)
     for (let logger of Object.keys(benches[group])) {

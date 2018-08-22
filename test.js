@@ -1,7 +1,8 @@
 var test = require('ava')
-var log = require('./')
-var toJson = log.toJson
-var stringifyPairs = log.stringifyPairs
+var jsonLog = require('./')
+var log = jsonLog.child({}, {time: false, write: () => {}})
+var toJson = jsonLog.toJson
+var stringifyPairs = jsonLog.stringifyPairs
 
 test('toJson', function (t) {
   t.is(toJson(), undefined)
@@ -81,7 +82,7 @@ test('stringifyPairs - unexpected inputs', function (t) {
   t.is(stringifyPairs(new String('hi')), '"0":"h","1":"i",')// eslint-disable-line no-new-wrappers
   t.is(stringifyPairs('hi'), '"data":"hi",')
   t.is(stringifyPairs([1, 2, 3]), '"data":[1,2,3],')
-  t.is(stringifyPairs(log), '"error":"[Function]","warn":"[Function]","info":"[Function]","child":"[Function: child]","toJson":"[Function: toJson]","stringifyPairs":"[Function: stringifyPairs]",')
+  t.is(stringifyPairs(log), '"error":"[Function]","warn":"[Function]","info":"[Function]","child":"[Function]",')
   t.is(stringifyPairs(Symbol('sym')), '"data":"Symbol(sym)",')
   t.is(stringifyPairs(Buffer.alloc(1000, 0)), '"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >",')
   t.is(stringifyPairs(stringifyPairs), '"data":"[Function: stringifyPairs]",')
@@ -139,16 +140,28 @@ test('log.child duplicate keys rather than overwriting parent ctx', function (t)
 
 test.serial('log levels', function (t) {
   var last
-  process.stdout.write = function (line) {
-    last = 'OUT:' + line
-  }
-  process.stderr.write = function (line) {
-    last = 'ERR:' + line
-  }
-  log.info()
-  t.is(last, 'OUT:{"level":3,"msg":null}\n')
-  log.warn()
-  t.is(last, 'OUT:{"level":2,"msg":null}\n')
-  log.error()
-  t.is(last, 'ERR:{"level":1,"msg":null}\n')
+  var log2 = jsonLog.child({blah: 'ok'}, {
+    time: () => '',
+    write: function (line) {
+      last = 'OUT:' + line
+    },
+    levels: {
+      error: {
+        code: 1,
+        write: function (line) {
+          last = 'ERR:' + line
+        }
+      },
+      warn: {code: 2},
+      info: {code: 3, time: () => '"time":1,'}
+    }
+  })
+  log2.info('one')
+  t.is(last, 'OUT:{"level":3,"time":1,"blah":"ok","msg":"one"}\n')
+  log2.warn('two')
+  t.is(last, 'OUT:{"level":2,"blah":"ok","msg":"two"}\n')
+  log2.error('three')
+  t.is(last, 'ERR:{"level":1,"blah":"ok","msg":"three"}\n')
+  log2.child({aa: 3, blah: '?'}).info('one')
+  t.is(last, 'OUT:{"level":3,"time":1,"blah":"ok","aa":3,"blah":"?","msg":"one"}\n')
 })

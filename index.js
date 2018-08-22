@@ -5,7 +5,7 @@ function safety (data, seen) {
   if (typeof data === 'symbol') {
     return data.toString()
   } else if (typeof data === 'function') {
-    return data.name ? '[Function: ' + data.name + ']' : '[Function]'
+    return data.name ? `[Function: ${data.name}]` : '[Function]'
   } else if (typeof data !== 'object') {
     return data
   } else if (data === null) {
@@ -66,32 +66,50 @@ function stringifyPairs (data) {
   if (str[0] === '{') {
     return str.slice(1, -1) + ','
   }
-  return '"data":' + str + ','
+  return `"data":${str},`
 }
 
-function mkLevel (prefix, stream) {
+var timeFns = {
+  iso: () => `"time":"${(new Date()).toISOString()}",`,
+  now: () => `"time":${Date.now()},`,
+  none: () => ''
+}
+
+function mkLevel (level, time, ctx, write) {
+  if (typeof time !== 'function') {
+    time = timeFns[timeFns.hasOwnProperty(time) ? time : 'none']
+  }
   return function (message, data) {
     if (arguments.length === 1 && typeof message !== 'string') {
       data = message
       message = null
     }
-    var line = prefix + stringifyPairs(data) + '"msg":' + (toJson(message) || 'null') + '}\n'
-    stream.write(line)
+    var line = `{"level":${level},${time()}${ctx}${stringifyPairs(data)}"msg":${toJson(message) || 'null'}}\n`
+    write(line)
     return line
   }
 }
 
-function Logger (ctx) {
-  return {
-    error: mkLevel('{"level":1,' + ctx, process.stderr),
-    warn: mkLevel('{"level":2,' + ctx, process.stdout),
-    info: mkLevel('{"level":3,' + ctx, process.stdout),
-    child: function (moreCtx) {
-      return Logger(ctx + stringifyPairs(moreCtx))
-    }
+function Logger (ctx, conf) {
+  var log = {}
+  Object.keys(conf.levels).forEach(function (lname) {
+    var level = Object.assign({}, conf, conf.levels[lname])
+    log[lname] = mkLevel(level.code, level.time, ctx, level.write)
+  })
+  log.child = function (moreCtx, moreConf) {
+    return Logger(ctx + stringifyPairs(moreCtx), Object.assign({}, conf, moreConf))
   }
+  return log
 }
 
-module.exports = Logger('')
+module.exports = Logger('', {
+  time: 'iso',
+  write: process.stdout.write.bind(process.stdout),
+  levels: {
+    error: {code: 1, write: process.stderr.write.bind(process.stderr)},
+    warn: {code: 2},
+    info: {code: 3}
+  }
+})
 module.exports.toJson = toJson
 module.exports.stringifyPairs = stringifyPairs

@@ -19,7 +19,7 @@ Works great with systemd, heroku, or lambda.
   * [log.info(message, data)](#loginfomessage-data)
   * [log.warn(message, data)](#logwarnmessage-data)
   * [log.error(message, data)](#logerrormessage-data)
-  * [log2 = log.child(data)](#log2--logchilddata)
+  * [log2 = log.child(data[, conf])](#log2--logchilddata-conf)
 - [License](#license)
 
 ## Philosophy
@@ -31,15 +31,27 @@ Your nodejs process should not be burdened with all that complexity. Simply writ
 
 I often use systemd with journald+syslog. It works amazing. You can always set up other tools that monitor syslog and pipe them to another service i.e. AWS Cloudwatch.
 
-#### Timestamp? pid? hostname?
+NOTE: You can change the write method using [.child(data, {write: ...})](#log2--logchilddata-conf)
 
-The process manager's logger should add timestamps and other info such as the process name, pid and hostname.
+#### pid? hostname?
+
+The process manager's logger should add info such as the process name, pid and hostname.
+
+NOTE: If needed, you can add them like other context data:
+```js
+log.child({
+  hostname: require('os').hostname(),
+  pid: process.pid
+})
+```
 
 ### Logs should be meaningful
 
 Logs should help you monitor the system, alert you of errors, and help you diagnose issues in a post-mortem. They should not be riddled with "normal" error messages that drown out the errors that require your attention.
 
 Having only 3 levels helps you focus and create meaningful, actionable logs.
+
+NOTE: You can customize the levels using [.child(data, {levels: ...})](#log2--logchilddata-conf)
 
 #### 1 - `error`
 
@@ -104,17 +116,17 @@ Simply write a message string along with some optional data to `stdout` at level
 
 ```js
 log.info('hello world')
-// OUT-> {"level":3,"msg":"hello world"}
+// OUT-> {"level":3,"time":...,"msg":"hello world"}
 
 log.info('hello world', {extra: 'data', arr: [1, 2]})
-// OUT-> {"level":3,"extra":"data","arr":[1,2],"msg":"hello world"}
+// OUT-> {"level":3,"time":...,"extra":"data","arr":[1,2],"msg":"hello world"}
 
 log.info('hello world', [1, 2])// shorthand for {data: [1,2]}
-// OUT-> {"level":3,"data":[1,2],"msg":"hello world"}
+// OUT-> {"level":3,"time":...,"data":[1,2],"msg":"hello world"}
 
 // Accidentally included a buffer or typed array in your data? No problem.
 log.info('oops!!', Buffer.alloc(10000000))
-// OUT-> {"level":3,"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >","msg":"oops!!"}
+// OUT-> {"level":3,"time":...,"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >","msg":"oops!!"}
 ```
 
 ### log.warn(message, data)
@@ -123,7 +135,7 @@ Same as `log.info` but level is `2`
 
 ```js
 log.warn('wat da?', {more: 'info'})
-// OUT-> {"level":2,"more":"info","msg":"wat da?"}
+// OUT-> {"level":2,"time":...,"more":"info","msg":"wat da?"}
 ```
 
 ### log.error(message, data)
@@ -133,10 +145,10 @@ Same as `log.info` but writes to `stderr` and level is `1`
 ```js
 log.error('grrr', {err: new Error('fail')})
 log.error('grrr', new Error('fail'))// shorthand for {err: ...}
-// ERR-> {"level":1,"err":{"name":"Error","message":"fail","stack":"Error..."},"msg":"some error"}
+// ERR-> {"level":1,"time":...,"err":{"name":"Error","message":"fail","stack":"Error..."},"msg":"some error"}
 ```
 
-### log2 = log.child(data)
+### log2 = log.child(data[, conf])
 
 Create a new log that has the context `data` included on every entry.
 
@@ -144,14 +156,14 @@ Create a new log that has the context `data` included on every entry.
 var log2 = log.child({reqId: 1, foo: 'bar'})
 
 log2.info('hello again')
-// OUT-> {"level":3,"reqId":1,"foo":"bar","msg":"hello again"}
+// OUT-> {"level":3,"time":...,"reqId":1,"foo":"bar","msg":"hello again"}
 
 log2.info('hello again', {aaa: 1})
-// OUT-> {"level":3,"reqId":1,"foo":"bar","aaa":1,"msg":"hello again"}
+// OUT-> {"level":3,"time":...,"reqId":1,"foo":"bar","aaa":1,"msg":"hello again"}
 
 var log3 = log2.child({baz: '333'})
 log3.info('yet again')
-// OUT-> {"level":3,"reqId":1,"foo":"bar","baz":"333","msg":"yet again"}
+// OUT-> {"level":3,"time":...,"reqId":1,"foo":"bar","baz":"333","msg":"yet again"}
 ```
 
 You can override a parent data context key, but it will write both keys to the log so no data is lost.
@@ -160,7 +172,26 @@ You can override a parent data context key, but it will write both keys to the l
 var log2 = log.child({aaa: 'base'})
 var log3 = log2.child({aaa: 'over1'})
 log3.info('try to overwrite', {aaa: 'inline'})
-// OUT-> {"level":3,"aaa":"base","aaa":"over1","aaa":"inline","msg":"try to overwrite"}
+// OUT-> {"level":3,"time":...,"aaa":"base","aaa":"over1","aaa":"inline","msg":"try to overwrite"}
+```
+
+You can also configure the logger to setup custom timestamps, log level, and output write method.
+
+* `time`: `'iso' | 'now' | false | function(){return '"time":?,'}`
+* `write`: `function(line){}`
+* `levels`: `{<level>: {code: <number or string>[, ...conf]}}` For each level specify the code to write to the log, and optionally extend it with custom write/time functions.
+
+The default config:
+```js
+{
+  time: 'iso',
+  write: process.stdout.write.bind(process.stdout),
+  levels: {
+    error: {code: 1, write: process.stderr.write.bind(process.stderr)},
+    warn: {code: 2},
+    info: {code: 3}
+  }
+}
 ```
 
 ## License
