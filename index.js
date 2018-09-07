@@ -15,7 +15,7 @@ function safety (data, seen) {
   } else if (Buffer.isBuffer(data)) {
     return util.inspect(data)
   } else if (isTypedArray(data)) {
-    return util.inspect(data, {maxArrayLength: 10, breakLength: Infinity})
+    return util.inspect(data, { maxArrayLength: 10, breakLength: Infinity })
   }
   if (seen.indexOf(data) >= 0) {
     return '[Circular]'
@@ -57,7 +57,7 @@ function toJson (data) {
 
 function stringifyPairs (data) {
   if (data instanceof Error) {
-    data = {err: data}
+    data = { err: data }
   }
   var str = toJson(data)
   if (!str || str === 'null' || str === '{}') {
@@ -106,9 +106,9 @@ module.exports = Logger('', {
   time: 'iso',
   write: process.stdout.write.bind(process.stdout),
   levels: {
-    error: {code: 1, write: process.stderr.write.bind(process.stderr)},
-    warn: {code: 2},
-    info: {code: 3}
+    error: { code: 1, write: process.stderr.write.bind(process.stderr) },
+    warn: { code: 2 },
+    info: { code: 3 }
   }
 })
 module.exports.toJson = toJson

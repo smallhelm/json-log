@@ -1,8 +1,8 @@
 var jsonLog = require('./')
 var spawn = require('child_process').spawn
 
-var log = jsonLog.child({}, {time: false})
-var logNoWrite = jsonLog.child({}, {time: false, write: function () {}})
+var log = jsonLog.child({}, { time: false })
+var logNoWrite = jsonLog.child({}, { time: false, write: function () {} })
 
 var deepObj = require('./package.json')
 deepObj.d0 = JSON.parse(JSON.stringify(deepObj))
@@ -42,16 +42,16 @@ var benches = {
   },
   child: {
     base: (function () {
-      var one = logNoWrite.child({one: 1})
-      var two = one.child({two: 'foobar'})
-      var three = two.child({two: 'again'})
-      return mkBaseline(three.info('hi', {ok: 1023, wat: ['da', 'heck']}))
+      var one = logNoWrite.child({ one: 1 })
+      var two = one.child({ two: 'foobar' })
+      var three = two.child({ two: 'again' })
+      return mkBaseline(three.info('hi', { ok: 1023, wat: ['da', 'heck'] }))
     }()),
     jlog: function () {
-      var one = log.child({one: 1})
-      var two = one.child({two: 'foobar'})
-      var three = two.child({two: 'again'})
-      three.info('hi', {ok: 1023, wat: ['da', 'heck']})
+      var one = log.child({ one: 1 })
+      var two = one.child({ two: 'foobar' })
+      var three = two.child({ two: 'again' })
+      three.info('hi', { ok: 1023, wat: ['da', 'heck'] })
     }
   }
 }
