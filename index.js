@@ -7,6 +7,10 @@ var util = require('util')
 function safety (data, seen) {
   if (typeof data === 'symbol') {
     return data.toString()
+  } else if (typeof data === 'string') {
+    return data.length > 1000
+      ? data.substring(0, 1000) + '...'
+      : data
   } else if (typeof data === 'function') {
     return data.name ? `[Function: ${data.name}]` : '[Function]'
   } else if (typeof data !== 'object') {
@@ -21,7 +25,7 @@ function safety (data, seen) {
     return util.inspect(data, { maxArrayLength: 10, breakLength: Infinity })
   }
   if (seen.indexOf(data) >= 0) {
-    return '[Circular]'
+    return '[Dupl]'
   }
   seen.push(data)
   if (data instanceof http.IncomingMessage) {
@@ -67,7 +71,6 @@ function safety (data, seen) {
       out.stack = data.stack
     }
   }
-  seen.pop()
   return out
 }
 

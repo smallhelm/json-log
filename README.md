@@ -101,6 +101,7 @@ This json encoder gracefully handles the following:
 * Circular references
 * Error objects
 * Buffers and Typed Arrays (using util.inspect to truncate them)
+* http req/res objects
 
 See test.js for more details
 

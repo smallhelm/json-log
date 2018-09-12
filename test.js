@@ -26,35 +26,41 @@ test('toJson', function (t) {
   t.is(toJson(function () {}), '"[Function]"')
   t.is(toJson(function hi () {}), '"[Function: hi]"')
   t.is(toJson(toJson), '"[Function: toJson]"')
+
+  var superLongString = ''
+  for (let i = 0; i < 1000000; i++) {
+    superLongString += 'l'
+  }
+  t.is(toJson(superLongString), `"${superLongString.substring(0, 1000)}..."`)
 })
 
-test('toJson - Circular', function (t) {
+test('toJson - Dupl references', function (t) {
   var data = { a: 1 }
   data.b = data
-  t.is(toJson(data), '{"a":1,"b":"[Circular]"}')
+  t.is(toJson(data), '{"a":1,"b":"[Dupl]"}')
 
   data = { a: 1 }
   data.b = { c: data }
-  t.is(toJson(data), '{"a":1,"b":{"c":"[Circular]"}}')
+  t.is(toJson(data), '{"a":1,"b":{"c":"[Dupl]"}}')
 
   data = { a: 1, b: { c: 3 } }
   data.b.d = data
-  t.is(toJson(data), '{"a":1,"b":{"c":3,"d":"[Circular]"}}')
+  t.is(toJson(data), '{"a":1,"b":{"c":3,"d":"[Dupl]"}}')
 
   data = { a: 1 }
   data.b = [data, data]
-  t.is(toJson(data), '{"a":1,"b":["[Circular]","[Circular]"]}')
+  t.is(toJson(data), '{"a":1,"b":["[Dupl]","[Dupl]"]}')
 
   data = []
   data.push({ a: 1, b: data })
-  t.is(toJson(data), '[{"a":1,"b":"[Circular]"}]')
+  t.is(toJson(data), '[{"a":1,"b":"[Dupl]"}]')
 
-  // duplicates are not cycles
+  // duplicates not in the same cycle
   var foo = { bar: 'baz' }
   data = [foo, foo]
-  t.is(toJson(data), '[{"bar":"baz"},{"bar":"baz"}]')
+  t.is(toJson(data), '[{"bar":"baz"},"[Dupl]"]')
   data = { a: foo, b: foo }
-  t.is(toJson(data), '{"a":{"bar":"baz"},"b":{"bar":"baz"}}')
+  t.is(toJson(data), '{"a":{"bar":"baz"},"b":"[Dupl]"}')
 })
 
 test('toJson - errors', function (t) {
@@ -66,7 +72,7 @@ test('toJson - errors', function (t) {
   t.is(typeof json.stack, 'string')
   t.true(json.stack.length > 0)
   delete json.stack
-  t.deepEqual(json, { name: 'Error', message: 'oops', otherThing: { hi: '[Circular]' } })
+  t.deepEqual(json, { name: 'Error', message: 'oops', otherThing: { hi: '[Dupl]' } })
 })
 
 test.cb('toJson - http req/res', function (t) {
