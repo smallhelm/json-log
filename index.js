@@ -1,5 +1,8 @@
-var util = require('util')
+var EventEmitter = require('events')
+var http = require('http')
 var isTypedArray = require('is-typedarray')
+var Stream = require('stream')
+var util = require('util')
 
 function safety (data, seen) {
   if (typeof data === 'symbol') {
@@ -21,6 +24,23 @@ function safety (data, seen) {
     return '[Circular]'
   }
   seen.push(data)
+  if (data instanceof http.IncomingMessage) {
+    return {
+      url: data.url,
+      method: data.method,
+      headers: safety(data.headers, seen),
+
+      remoteAddress: data.connection && data.connection.remoteAddress,
+      remotePort: data.connection && data.connection.remotePort
+    }
+  } else if (data instanceof http.ServerResponse) {
+    return {
+      statusCode: data.statusCode,
+      header: data._header
+    }
+  } else if ((data instanceof Stream || data instanceof EventEmitter) && data.constructor) {
+    return `[${data.constructor.name} ${data + ''}]`
+  }
   var out
   var i, k
   if (Array.isArray(data)) {

@@ -1,5 +1,6 @@
 var test = require('ava')
 var jsonLog = require('./')
+var http = require('http')
 var log = jsonLog.child({}, { time: false, write: () => {} })
 var toJson = jsonLog.toJson
 var stringifyPairs = jsonLog.stringifyPairs
@@ -66,6 +67,41 @@ test('toJson - errors', function (t) {
   t.true(json.stack.length > 0)
   delete json.stack
   t.deepEqual(json, { name: 'Error', message: 'oops', otherThing: { hi: '[Circular]' } })
+})
+
+test.cb('toJson - http req/res', function (t) {
+  t.plan(12)
+  var server = http.createServer(function (req, res) {
+    res.end('hi')
+
+    req = JSON.parse(toJson(req))
+    t.deepEqual(Object.keys(req), ['url', 'method', 'headers', 'remoteAddress', 'remotePort'])
+    t.is(req.url, '/say-hi')
+    t.is(req.method, 'PUT')
+    t.is(req.headers['some-header'], 'wat')
+    t.is(typeof req.remoteAddress, 'string')
+    t.is(typeof req.remotePort, 'number')
+
+    res = JSON.parse(toJson(res))
+    t.deepEqual(Object.keys(res), ['statusCode', 'header'])
+    t.is(res.statusCode, 200)
+    t.is(typeof res.header, 'string')
+  })
+  server.unref()
+  server.listen(0, function () {
+    var opts = server.address()
+    opts.method = 'PUT'
+    opts.path = '/say-hi'
+    opts.headers = { 'some-header': 'wat' }
+    var r = http.request(opts, function (res) {
+      res = JSON.parse(toJson(res))
+      t.deepEqual(Object.keys(res), ['url', 'method', 'headers', 'remoteAddress', 'remotePort'])
+      t.is(res.headers['content-length'], '2')
+      t.end()
+    })
+    r.end()
+    t.is(toJson(r), '"[ClientRequest [object Object]]"')
+  })
 })
 
 test('stringifyPairs - unexpected inputs', function (t) {
