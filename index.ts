@@ -137,3 +137,4 @@ class JsonLog {
 }
 
 export const log = new JsonLog("");
+export default log;

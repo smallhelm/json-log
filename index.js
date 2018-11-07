@@ -126,4 +126,5 @@ class JsonLog {
     }
 }
 exports.log = new JsonLog("");
+exports.default = exports.log;
 //# sourceMappingURL=index.js.map

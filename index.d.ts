@@ -15,4 +15,4 @@ declare class JsonLog {
     child(moreCtx: any): JsonLog;
 }
 export declare const log: JsonLog;
-export {};
+export default log;
