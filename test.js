@@ -1,9 +1,25 @@
-var test = require('ava')
-var jsonLog = require('./')
+import {
+  toJson,
+  stringifyPairs,
+  timeFns,
+  mkLevel
+} from './'
+import test from 'ava'
 var http = require('http')
-var log = jsonLog.child({}, { time: false, write: () => {} })
-var toJson = jsonLog.toJson
-var stringifyPairs = jsonLog.stringifyPairs
+
+class JsonLogTEST {
+  constructor (ctx) {
+    this.ctx = ctx
+    this.error = mkLevel(1, timeFns.none, ctx, () => '')
+    this.warn = mkLevel(2, timeFns.none, ctx, () => '')
+    this.info = mkLevel(3, timeFns.none, ctx, () => '')
+  }
+  child (moreCtx) {
+    return new JsonLogTEST(this.ctx + stringifyPairs(moreCtx))
+  }
+}
+
+const log = new JsonLogTEST('')
 
 test('toJson', function (t) {
   t.is(toJson(), undefined)
@@ -16,8 +32,8 @@ test('toJson', function (t) {
   t.is(toJson(1e10), '10000000000')
   t.is(toJson(Symbol('hi')), '"Symbol(hi)"')
   t.is(toJson('say "hello".'), '"say \\"hello\\"."')
-  t.is(toJson(Buffer.alloc(1000, 0)), '"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >"')
-  t.is(toJson({ one: { two: Buffer.alloc(1000, 0) } }), '{"one":{"two":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >"}}')
+  t.is(toJson(Buffer.alloc(1000, 0)).replace(/950 more bytes>/, '>'), '"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >"')
+  t.is(toJson({ one: { two: Buffer.alloc(1000, 0) } }).replace(/950 more bytes>/, '>'), '{"one":{"two":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >"}}')
 
   t.is(toJson(new Int8Array(1000)), '"Int8Array [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ... 990 more items ]"')
 
@@ -124,9 +140,9 @@ test('stringifyPairs - unexpected inputs', function (t) {
   t.is(stringifyPairs(new String('hi')), '"0":"h","1":"i",')// eslint-disable-line no-new-wrappers
   t.is(stringifyPairs('hi'), '"data":"hi",')
   t.is(stringifyPairs([1, 2, 3]), '"data":[1,2,3],')
-  t.is(stringifyPairs(log), '"error":"[Function]","warn":"[Function]","info":"[Function]","child":"[Function]",')
+  t.is(stringifyPairs({ foo: 1, bar () {} }), '"foo":1,"bar":"[Function: bar]",')
   t.is(stringifyPairs(Symbol('sym')), '"data":"Symbol(sym)",')
-  t.is(stringifyPairs(Buffer.alloc(1000, 0)), '"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >",')
+  t.is(stringifyPairs(Buffer.alloc(1000, 0)).replace(/950 more bytes>/, '>'), '"data":"<Buffer 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ... >",')
   t.is(stringifyPairs(stringifyPairs), '"data":"[Function: stringifyPairs]",')
 
   t.is(stringifyPairs({
@@ -142,11 +158,11 @@ test('log', function (t) {
   t.is(log.info(), '{"level":3,"msg":null}\n')
   t.is(log.info('hi'), '{"level":3,"msg":"hi"}\n')
   t.is(log.info('hi', { some: ['data'] }), '{"level":3,"some":["data"],"msg":"hi"}\n')
-  t.is(log.info({ some: ['data'] }), '{"level":3,"some":["data"],"msg":null}\n')
+  t.is(log.info({ some: ['data'] }), '{"level":3,"msg":{"some":["data"]}}\n')
 
   var err = new Error('wat')
   delete err.stack
-  t.is(log.info(err), '{"level":3,"err":{"name":"Error","message":"wat"},"msg":null}\n')
+  t.is(log.info('dang', err), '{"level":3,"err":{"name":"Error","message":"wat"},"msg":"dang"}\n')
   err = new TypeError('wat')
   delete err.stack
   t.is(log.info('foo', err), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
@@ -158,7 +174,7 @@ test('log.child', function (t) {
   var log2 = log.child({ foo: 'bar' })
   t.is(log.info(), '{"level":3,"msg":null}\n')
   t.is(log2.info(), '{"level":3,"foo":"bar","msg":null}\n')
-  t.is(log2.info({ qux: 'quux' }), '{"level":3,"foo":"bar","qux":"quux","msg":null}\n')
+  t.is(log2.info('', { qux: 'quux' }), '{"level":3,"foo":"bar","qux":"quux","msg":""}\n')
 })
 
 test('log.child ctx is immutable', function (t) {
@@ -175,35 +191,23 @@ test('log.child ctx is immutable', function (t) {
 
 test('log.child duplicate keys rather than overwriting parent ctx', function (t) {
   var log2 = log.child({ foo: 'bar' })
-  t.is(log2.info({ foo: 'baz' }), '{"level":3,"foo":"bar","foo":"baz","msg":null}\n')
+  t.is(log2.info('', { foo: 'baz' }), '{"level":3,"foo":"bar","foo":"baz","msg":""}\n')
   var log3 = log2.child({ foo: 'overwrite?' })
-  t.is(log3.info({ foo: 'baz' }), '{"level":3,"foo":"bar","foo":"overwrite?","foo":"baz","msg":null}\n')
+  t.is(log3.info('', { foo: 'baz' }), '{"level":3,"foo":"bar","foo":"overwrite?","foo":"baz","msg":""}\n')
 })
 
-test.serial('log levels', function (t) {
+test('mkLevel', function (t) {
   var last
-  var log2 = jsonLog.child({ blah: 'ok' }, {
-    time: () => '',
-    write: function (line) {
-      last = 'OUT:' + line
-    },
-    levels: {
-      error: {
-        code: 1,
-        write: function (line) {
-          last = 'ERR:' + line
-        }
-      },
-      warn: { code: 2 },
-      info: { code: 3, time: () => '"time":1,' }
-    }
-  })
-  log2.info('one')
+  const error = mkLevel(1, timeFns.none, '"blah":"ok",', function (line) { last = 'ERR:' + line })
+  const warn = mkLevel(2, timeFns.none, '"blah":"ok",', function (line) { last = 'OUT:' + line })
+  const info = mkLevel(3, () => '"time":1,', '"blah":"ok",', function (line) { last = 'OUT:' + line })
+
+  info('one')
   t.is(last, 'OUT:{"level":3,"time":1,"blah":"ok","msg":"one"}\n')
-  log2.warn('two')
+
+  warn('two')
   t.is(last, 'OUT:{"level":2,"blah":"ok","msg":"two"}\n')
-  log2.error('three')
+
+  error('three')
   t.is(last, 'ERR:{"level":1,"blah":"ok","msg":"three"}\n')
-  log2.child({ aa: 3, blah: '?' }).info('one')
-  t.is(last, 'OUT:{"level":3,"time":1,"blah":"ok","aa":3,"blah":"?","msg":"one"}\n')
 })
