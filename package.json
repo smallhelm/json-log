@@ -22,7 +22,8 @@
     "json",
     "log",
     "stdout",
-    "stderr"
+    "stderr",
+    "typescript"
   ],
   "author": "smallhelm",
   "license": "MIT",

@@ -6,7 +6,7 @@ export declare const timeFns: {
     none: () => string;
 };
 export declare function mkLevel(level: number | string, time: (() => string), ctx: string, write: (line: string) => any): (message: string, data?: any) => string;
-declare class JsonLog {
+export declare class JsonLog {
     private readonly ctx;
     constructor(ctx: string);
     error: (message: string, data?: any) => string;

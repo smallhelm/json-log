@@ -121,7 +121,7 @@ const writeStdErr: (line: string) => void = process.stderr.write.bind(
   process.stderr
 );
 
-class JsonLog {
+export class JsonLog {
   private readonly ctx: string;
   constructor(ctx: string) {
     this.ctx = ctx;

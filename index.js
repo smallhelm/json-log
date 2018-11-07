@@ -125,6 +125,7 @@ class JsonLog {
         return new JsonLog(this.ctx + stringifyPairs(moreCtx));
     }
 }
+exports.JsonLog = JsonLog;
 exports.log = new JsonLog("");
 exports.default = exports.log;
 //# sourceMappingURL=index.js.map

@@ -1,6 +1,7 @@
 # json-log
 
 [![Build Status](https://travis-ci.org/smallhelm/json-log.svg)](https://travis-ci.org/smallhelm/json-log)
+[![TypeScript](https://img.shields.io/badge/types-TypeScript-blue.svg)](https://www.typescriptlang.org)
 
 Lightweight, robust, fast, and opinionated json logger.
 
@@ -183,12 +184,10 @@ log3.info("try to overwrite", { aaa: "inline" });
 This library exports the tools you need to build your own custom logger settings.
 
 ```js
-import { log, toJson, stringifyPairs, timeFns, mkLevel } from "json-log";
+import { toJson, stringifyPairs, timeFns, mkLevel } from "json-log";
 ```
 
 ### str = toJson(data)
-
-`import { timeFns, mkLevel } from "json-log";`
 
 Json stringify anything in a safe way that makes sense for logging.
 
@@ -218,8 +217,10 @@ This returns the logger function for a given level. See below for how it's used.
 class MyAwesomeLogger {
   constructor(ctx) {
     this.ctx = ctx;
+
     // MyAwesomeLogger is soo much better than the default "json-log"
     // Why may you ask? Because 3 log levels are never enough!
+
     this.emergency = mkLevel(0, timeFns.iso, ctx, writeStdErr);
     this.panic = mkLevel(10, timeFns.iso, ctx, writeStdErr);
     this.alert = mkLevel(20, timeFns.iso, ctx, writeStdErr);
