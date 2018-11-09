@@ -116,9 +116,9 @@ const writeStdOut = process.stdout.write.bind(process.stdout);
 const writeStdErr = process.stderr.write.bind(process.stderr);
 class JsonLog {
     constructor(ctx) {
-        this.error = mkLevel(1, exports.timeFns.iso, this.ctx, writeStdErr);
-        this.warn = mkLevel(2, exports.timeFns.iso, this.ctx, writeStdOut);
-        this.info = mkLevel(3, exports.timeFns.iso, this.ctx, writeStdOut);
+        this.error = mkLevel(1, exports.timeFns.iso, ctx, writeStdErr);
+        this.warn = mkLevel(2, exports.timeFns.iso, ctx, writeStdOut);
+        this.info = mkLevel(3, exports.timeFns.iso, ctx, writeStdOut);
         this.ctx = ctx;
     }
     child(moreCtx) {

@@ -1,4 +1,6 @@
 import {
+  log,
+  JsonLog,
   toJson,
   stringifyPairs,
   timeFns,
@@ -19,7 +21,7 @@ class JsonLogTEST {
   }
 }
 
-const log = new JsonLogTEST('')
+const logT = new JsonLogTEST('')
 
 test('toJson', function (t) {
   t.is(toJson(), undefined)
@@ -154,43 +156,43 @@ test('stringifyPairs - unexpected inputs', function (t) {
   t.true(/^"err":{"name":"Error","message":"hi","stack":.*},$/.test(stringifyPairs(new Error('hi'))))
 })
 
-test('log', function (t) {
-  t.is(log.info(), '{"level":3,"msg":null}\n')
-  t.is(log.info('hi'), '{"level":3,"msg":"hi"}\n')
-  t.is(log.info('hi', { some: ['data'] }), '{"level":3,"some":["data"],"msg":"hi"}\n')
-  t.is(log.info({ some: ['data'] }), '{"level":3,"msg":{"some":["data"]}}\n')
+test('logT', function (t) {
+  t.is(logT.info(), '{"level":3,"msg":null}\n')
+  t.is(logT.info('hi'), '{"level":3,"msg":"hi"}\n')
+  t.is(logT.info('hi', { some: ['data'] }), '{"level":3,"some":["data"],"msg":"hi"}\n')
+  t.is(logT.info({ some: ['data'] }), '{"level":3,"msg":{"some":["data"]}}\n')
 
   var err = new Error('wat')
   delete err.stack
-  t.is(log.info('dang', err), '{"level":3,"err":{"name":"Error","message":"wat"},"msg":"dang"}\n')
+  t.is(logT.info('dang', err), '{"level":3,"err":{"name":"Error","message":"wat"},"msg":"dang"}\n')
   err = new TypeError('wat')
   delete err.stack
-  t.is(log.info('foo', err), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
-  t.is(log.info('foo', { err: err }), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
-  t.is(log.info('foo', { hi: err }), '{"level":3,"hi":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
+  t.is(logT.info('foo', err), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
+  t.is(logT.info('foo', { err: err }), '{"level":3,"err":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
+  t.is(logT.info('foo', { hi: err }), '{"level":3,"hi":{"name":"TypeError","message":"wat"},"msg":"foo"}\n')
 })
 
-test('log.child', function (t) {
-  var log2 = log.child({ foo: 'bar' })
-  t.is(log.info(), '{"level":3,"msg":null}\n')
+test('logT.child', function (t) {
+  var log2 = logT.child({ foo: 'bar' })
+  t.is(logT.info(), '{"level":3,"msg":null}\n')
   t.is(log2.info(), '{"level":3,"foo":"bar","msg":null}\n')
   t.is(log2.info('', { qux: 'quux' }), '{"level":3,"foo":"bar","qux":"quux","msg":""}\n')
 })
 
-test('log.child ctx is immutable', function (t) {
+test('logT.child ctx is immutable', function (t) {
   var ctx = { a: 1, b: 2, c: { d: 3 } }
-  var log2 = log.child(ctx)
+  var log2 = logT.child(ctx)
   t.is(log2.info(), '{"level":3,"a":1,"b":2,"c":{"d":3},"msg":null}\n')
   ctx.b = 'change'
   ctx.c.d = 'change'
   ctx.added = 1
   t.is(log2.info(), '{"level":3,"a":1,"b":2,"c":{"d":3},"msg":null}\n')
-  log2 = log.child(ctx)
+  log2 = logT.child(ctx)
   t.is(log2.info(), '{"level":3,"a":1,"b":"change","c":{"d":"change"},"added":1,"msg":null}\n')
 })
 
-test('log.child duplicate keys rather than overwriting parent ctx', function (t) {
-  var log2 = log.child({ foo: 'bar' })
+test('logT.child duplicate keys rather than overwriting parent ctx', function (t) {
+  var log2 = logT.child({ foo: 'bar' })
   t.is(log2.info('', { foo: 'baz' }), '{"level":3,"foo":"bar","foo":"baz","msg":""}\n')
   var log3 = log2.child({ foo: 'overwrite?' })
   t.is(log3.info('', { foo: 'baz' }), '{"level":3,"foo":"bar","foo":"overwrite?","foo":"baz","msg":""}\n')
@@ -210,4 +212,15 @@ test('mkLevel', function (t) {
 
   error('three')
   t.is(last, 'ERR:{"level":1,"blah":"ok","msg":"three"}\n')
+})
+
+test('test stock JsonLog', function (t) {
+  let out = log.info('hi', { one: 2 })
+    .replace(/"[0-9-]+T[0-9:.]+Z"/, '[ISO-TIME]')
+  t.is(out, '{"level":3,"time":[ISO-TIME],"one":2,"msg":"hi"}\n')
+
+  let log2 = new JsonLog('some-ctx')
+  out = log2.info('hi', { one: 2 })
+    .replace(/"[0-9-]+T[0-9:.]+Z"/, '[ISO-TIME]')
+  t.is(out, '{"level":3,"time":[ISO-TIME],some-ctx"one":2,"msg":"hi"}\n')
 })

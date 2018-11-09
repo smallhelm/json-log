@@ -99,12 +99,14 @@ export const timeFns = {
   none: () => ""
 };
 
+export type LogLevelFn = (message: string, data?: any) => string;
+
 export function mkLevel(
   level: number | string,
   time: (() => string),
   ctx: string,
   write: (line: string) => any
-) {
+): LogLevelFn {
   return function(message: string, data?: any) {
     var line = `{"level":${level},${time()}${ctx}${stringifyPairs(
       data
@@ -123,13 +125,16 @@ const writeStdErr: (line: string) => void = process.stderr.write.bind(
 
 export class JsonLog {
   private readonly ctx: string;
+  readonly error: LogLevelFn;
+  readonly warn: LogLevelFn;
+  readonly info: LogLevelFn;
+
   constructor(ctx: string) {
+    this.error = mkLevel(1, timeFns.iso, ctx, writeStdErr);
+    this.warn = mkLevel(2, timeFns.iso, ctx, writeStdOut);
+    this.info = mkLevel(3, timeFns.iso, ctx, writeStdOut);
     this.ctx = ctx;
   }
-
-  error = mkLevel(1, timeFns.iso, this.ctx, writeStdErr);
-  warn = mkLevel(2, timeFns.iso, this.ctx, writeStdOut);
-  info = mkLevel(3, timeFns.iso, this.ctx, writeStdOut);
 
   child(moreCtx: any) {
     return new JsonLog(this.ctx + stringifyPairs(moreCtx));

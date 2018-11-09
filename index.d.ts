@@ -5,13 +5,14 @@ export declare const timeFns: {
     now: () => string;
     none: () => string;
 };
-export declare function mkLevel(level: number | string, time: (() => string), ctx: string, write: (line: string) => any): (message: string, data?: any) => string;
+export declare type LogLevelFn = (message: string, data?: any) => string;
+export declare function mkLevel(level: number | string, time: (() => string), ctx: string, write: (line: string) => any): LogLevelFn;
 export declare class JsonLog {
     private readonly ctx;
+    readonly error: LogLevelFn;
+    readonly warn: LogLevelFn;
+    readonly info: LogLevelFn;
     constructor(ctx: string);
-    error: (message: string, data?: any) => string;
-    warn: (message: string, data?: any) => string;
-    info: (message: string, data?: any) => string;
     child(moreCtx: any): JsonLog;
 }
 export declare const log: JsonLog;
